@@ -14,19 +14,33 @@
 
 int main(int argc, char *argv[])
 {
-    LOG(INFO) << "soft version: v" << MNIST_VERSION;
-    LOG(INFO) << "test_mnist_tvm";
+    if (argc > 1)
+    {
+        LOG(INFO) << "[mnist tvm]:Image Path: " << argv[1];
+        LOG(INFO) << "[mnist tvm]:Dynamic Lib Path: " << argv[2];
+        LOG(INFO) << "[mnist tvm]:Parameter Path: " << argv[3];
+    }
+    else
+    {
+        LOG(INFO) << "exe [imag path] [module dynamic lib path] [module parameter path]";
+        return -1;
+    }
+    LOG(INFO) << "[mnist tvm]:Soft Version: V" << MNIST_VERSION;
 
     // read the image
     cv::Mat image, gray_image;
-    image = cv::imread("../test_dataset/test.png");
+    image = cv::imread(argv[1]);
+    //image = cv::imread("../test_dataset/test.png");
     if(image.data == nullptr){
-        LOG(INFO) << "image don't exist";
+        LOG(INFO) << "[mnist tvm]:Image don't exist!";
         return 0;
     }
     else{
         cv::cvtColor(image, gray_image, cv::COLOR_BGR2GRAY);
         gray_image.convertTo(gray_image, CV_32FC3);
+
+        LOG(INFO) << "[mnist tvm]:---Load Image--";
+        LOG(INFO) << "[mnist tvm]:Image size: " << gray_image.rows << " X " << gray_image.cols;
         // LOG(INFO) << gray_image;
         // cv::imshow("mnist image", gray_image);
         // cv::waitKey(0);
@@ -47,7 +61,7 @@ int main(int argc, char *argv[])
     DLTensor *y;
     int input_ndim  = 4;
     int output_ndim = 2;
-    int64_t input_shape[4]  = {1, 1, 28, 28};
+    int64_t input_shape[4]  = {1, 1, gray_image.rows, gray_image.cols};
     int64_t output_shape[2] = {1, 10};
 
     int dtype_code  = kDLFloat;
@@ -64,9 +78,11 @@ int main(int argc, char *argv[])
     TVMArrayAlloc(output_shape, output_ndim, dtype_code, dtype_bits, dtype_lanes, device_type, device_id, &y);
 
     // load the mnist dynamic lib
-    tvm::runtime::Module mod_dylib = tvm::runtime::Module::LoadFromFile("../lib/mnist.so");
+    LOG(INFO) << "[mnist tvm]:---Load Dynamic Lib--";
+    tvm::runtime::Module mod_dylib = tvm::runtime::Module::LoadFromFile(argv[2]);
     // load the mnist module parameters
-    std::ifstream params_in("../lib/mnist.params", std::ios::binary);
+    LOG(INFO) << "[mnist tvm]:---Load Parameters--";
+    std::ifstream params_in(argv[3], std::ios::binary);
     std::string params_data((std::istreambuf_iterator<char>(params_in)), std::istreambuf_iterator<char>());
     params_in.close();
     params_arr.data = params_data.c_str();
@@ -83,7 +99,7 @@ int main(int argc, char *argv[])
     // get output data function
     tvm::runtime::PackedFunc get_output = mod.GetFunction("get_output");
     
-    memcpy(x->data, gray_image.data, 28 * 28 * sizeof(float));
+    memcpy(x->data, gray_image.data, gray_image.rows * gray_image.cols * sizeof(float));
     set_input("Input3", x);
     load_params(params_arr);
     run();

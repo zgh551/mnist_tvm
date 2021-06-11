@@ -1,17 +1,78 @@
 # mnist_tvm
-This project using **TVM** to deploy the mnist module
+This project using **TVM** to deploy the mnist module on pc or arm device.
 
-## build
-1. first `mkdir build`flolder in root 
-2. configure the build enviroment
+## 1. Build
+- `x64`
+
+1. in `mnist_tvm` folder create `build_x64` and enter into it
 
 ```shell
-$ cmake ..
+$ mkdir build_x64
+$ cd build_x64
+```
+
+2. configure build environment
+
+set the `CMAKE_SYSTEM_PROCESSOR=x64`to link the `x64` runtime dynamic library.
+
+```shell
+$ cmake .. -DCMAKE_SYSTEM_PROCESSOR=x64
+```
+
+3. build the source file
+
+this step will generate `mnist_test` executable file.
+
+```shell
+$ make -j$(nproc)
+```
+
+
+- `armv8`
+
+1. install cross-compile for `aarch64`
+
+```shell
+$ sudo apt-get update
+$ sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+```
+
+2. in `mnist_tvm` folder create `build_armv8` and enter into it.
+
+```shell
+$ mkdir build_armv8
+$ cd build_armv8
+```
+
+3. configure build environment
+
+```shell
+$ cmake .. \
+		-DCMAKE_SYSTEM_NAME=Linux \
+		-DCMAKE_SYSTEM_VERSION=1 \
+		-DCMAKE_SYSTEM_PROCESSOR=armv8 \
+		-DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc \
+		-DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ \
+		-DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
+		-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+		-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+		-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
 ```
 3. build the project
 ```shell
-$ make
+$ make -j$(nproc)
 ```
+
+## 2. Running
+
+when running the executable file,three parameter need to be input.
+
+```shell
+executer [image path] [module dynamic lib path] [module parameter path]
+```
+
+
+
 
 ## Dependence
 
@@ -107,14 +168,14 @@ $ cmake -D CMAKE_TOOLCHAIN_FILE="/path/to/opencv/platforms/linux/aarch64-gnu.too
 
 - compiler error
 
-Disable `BUILD_opencv_freetype=OFF`can solve follow error.
+1. Disable `BUILD_opencv_freetype=OFF`can solve follow error.
 
 ````
 /usr/lib/gcc-cross/aarch64-linux-gnu/7/../../../../aarch64-linux-gnu/bin/ld: cannot find -lfreetype
 /usr/lib/gcc-cross/aarch64-linux-gnu/7/../../../../aarch64-linux-gnu/bin/ld: cannot find -lharfbuzz
 ````
 
-or add `freetype `lib using cross compiler tool
+2. add `freetype `lib using cross compiler tool
 
 
 
