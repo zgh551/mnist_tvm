@@ -71,6 +71,10 @@ when running the executable file,three parameter need to be input.
 executer [image path] [module dynamic lib path] [module parameter path]
 ```
 
+## 3. Memory Space
+
+when using `opencl` deploy the module, `cpu`as host send the data to device. so we need using `TVMArrayCopyFromBytes`and `TVMArrayCopyToBytes`to realize memory copy.
+
 
 
 
