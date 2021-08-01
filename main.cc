@@ -1,4 +1,3 @@
-
 // tvm 
 #include <dlpack/dlpack.h>
 #include <tvm/runtime/module.h>
@@ -10,6 +9,15 @@
 // system
 #include <cstdio>
 #include <fstream>
+#include <sys/time.h>
+
+double GetCurTime(void)
+{
+    struct timeval tm;
+    gettimeofday(&tm, 0);
+    return tm.tv_usec + tm.tv_sec * 1000000;
+}
+
 
 
 int main(int argc, char *argv[])
@@ -30,7 +38,6 @@ int main(int argc, char *argv[])
     // read the image
     cv::Mat image, gray_image;
     image = cv::imread(argv[1]);
-    //image = cv::imread("../test_dataset/test.png");
     if(image.data == nullptr){
         LOG(INFO) << "[mnist tvm]:Image don't exist!";
         return 0;
@@ -46,16 +53,7 @@ int main(int argc, char *argv[])
         // cv::waitKey(0);
     }
 
-    // std::ifstream image("../test_dataset/test.jpg", std::ios::binary);
-    // std::string image_data((std::istreambuf_iterator<char>(image)), std::istreambuf_iterator<char>());
-    // image.seekg(0, image.end);
-    // int lenght = image.tellg();
-    // LOG(INFO) << "image size:" << image_data.length();
-    // image.seekg(0, image.beg);
-    // char *buffer = new char[lenght];
-    // image.read(buffer, lenght);
-    // image.close();
-
+    std::vector<float> y_output(10);
     // create tensor
     DLTensor *x;
     DLTensor *y;
@@ -67,11 +65,16 @@ int main(int argc, char *argv[])
     int dtype_code  = kDLFloat;
     int dtype_bits  = 32;
     int dtype_lanes = 1;
-    int device_type = kDLCPU;
     int device_id   = 0;
-
+#ifdef CPU 
+    int device_type = kDLCPU;
+    LOG(INFO) << "[mnist tvm]:---Device Type Configure:CPU---";
+#elif OpenCL 
+    int device_type = kDLOpenCL;
+    LOG(INFO) << "[mnist tvm]:---Device Type Configure:OPENCL---";
+#endif
     TVMByteArray params_arr;
-    DLDevice dev{kDLCPU, 0};
+    DLDevice dev{static_cast<DLDeviceType>(device_type), device_id};
 
     // allocate the array space
     TVMArrayAlloc(input_shape, input_ndim, dtype_code, dtype_bits, dtype_lanes, device_type, device_id, &x);
@@ -99,17 +102,29 @@ int main(int argc, char *argv[])
     // get output data function
     tvm::runtime::PackedFunc get_output = mod.GetFunction("get_output");
     
-    memcpy(x->data, gray_image.data, gray_image.rows * gray_image.cols * sizeof(float));
+    TVMArrayCopyFromBytes(x, gray_image.data, gray_image.rows * gray_image.cols * sizeof(float));
+
     set_input("Input3", x);
     load_params(params_arr);
-    run();
-    get_output(0, y);
 
-    auto result = static_cast<float *>(y->data);
+    double t1 = GetCurTime();
+    run();
+    double t2 = GetCurTime();
+    get_output(0, y);
+    TVMArrayCopyToBytes(y, y_output.data(), 10 * sizeof(float));
+    double t3 = GetCurTime();
+    TVMArrayFree(x);
+    TVMArrayFree(y);
+    double t4 = GetCurTime();
+
+    //auto result = static_cast<float *>(y->data);
     for (int i = 0; i < 10; i++)
     {
-        LOG(INFO) << result[i];
+        LOG(INFO) << y_output[i];
     }
+    LOG(INFO) << "[mnist tvm]:---Executor Time(run):" << t2 - t1 << "[us]";
+    LOG(INFO) << "[mnist tvm]:---Executor Time(get_output):" << t3 - t2 << "[us]";
+    LOG(INFO) << "[mnist tvm]:---Executor Time(Free):" << t4 - t3 << "[us]";
 
     return 0;
 }
