@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.05)
+cmake_minimum_required(VERSION 3.16)
 
 project(mnist_module)
 ## Set current version and minimal executable version.
@@ -38,9 +38,6 @@ add_compile_options(-std=c++14 -O2)
 
 ## set the link lib location
 ## link the dynamic lib
-
-message(STATUS ${CMAKE_HOST_SYSTEM_PROCESSOR})
-message(STATUS ${CMAKE_SYSTEM_PROCESSOR})
 set(MACHINE_NAME x86_64 CACHE STRING "the machine name")
 set_property(CACHE MACHINE_NAME PROPERTY STRINGS x86_64 aarch64)
 
@@ -49,7 +46,7 @@ if (${MACHINE_NAME} MATCHES aarch64)
     link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/aarch64)
 else () 
     message(STATUS "link the x64 lib")
-    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/x64)
+    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/x86_64)
 endif()
 
 add_executable(mnist_test main.cc)
