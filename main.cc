@@ -3,6 +3,7 @@
 #include <tvm/runtime/module.h>
 #include <tvm/runtime/packed_func.h>
 #include <tvm/runtime/registry.h>
+#include <tvm/runtime/c_runtime_api.h>
 // opencv 
 #include <opencv4/opencv2/opencv.hpp>
 //#include <opencv2/opencv.hpp>
