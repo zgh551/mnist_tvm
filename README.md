@@ -186,6 +186,16 @@ $ make -j$(nproc)
 ```
 ## 2. Running
 
+### 2.1. depence
+- opencv
+1. libopencv_core.so
+2. libopencv_imgcodecs.so
+3. libopencv_imgproc.so
+
+- tvm
+1. libtvm-runtime.so
+
+### 2.2. run
 when running the executable file,three parameter need to be input.
 
 ```shell

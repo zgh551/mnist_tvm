@@ -35,7 +35,8 @@ elif target_type == 'ARMv8':
     target      = tvm.target.Target("llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon")
     target_host = tvm.target.Target("llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon")
 elif target_type == 'OpenCL':
-    target      = tvm.target.Target("opencl -device=intel_graphics")
+    target      = tvm.target.Target("opencl -device=mali")
+    #target      = tvm.target.Target("opencl -device=intel_graphics")
     target_host = tvm.target.Target("llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon")
                                         
 print(target)
