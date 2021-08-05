@@ -28,11 +28,6 @@ In the `models` folder will  generate executers for different platforms , the co
 
 ```
 models/
-├── aarch64
-│   ├── 5.png
-│   ├── mnist.params
-│   ├── mnist.so
-│   └── mnist_test
 ├── aarch64_run.tar.gz
 ├── data
 │   ├── 1.png
@@ -44,19 +39,16 @@ models/
 │   ├── 7.png
 │   ├── 8.png
 │   └── 9.png
-├── opencl
-│   ├── 5.png
-│   ├── mnist.params
-│   ├── mnist.so
-│   └── mnist_test
 ├── opencl_run.tar.gz
 └── x86_64
     ├── 5.png
     ├── mnist.params
     ├── mnist.so
     └── mnist_test
+
 ```
-The `data` folder contain the test data.
+The `data` folder contain some test data. The `aarch64_run.tar.gz` and `opencl_run.tar.gz` file can copy to the target device to running. In the PC host, you can enter into `x86_64` folder to run `./mnist_test`.
+
 >> note: make sure the configure of python environment which contain tvm and AI fronted frame is ok.
 
 ## 2. Device Run
@@ -97,21 +89,21 @@ In the `models` folder, copy `aarch64_run.tar.gz` or `opencl_run.tar.gz`  file t
 - unzip
 
 ```shell
-$ tar -zxvf aarch64_run.tar.gz aarch64_run
-$ tar -zxvf opencl_run.tar.gz opencl_run
+$ tar -zxvf aarch64_run.tar.gz
+$ tar -zxvf opencl_run.tar.gz
 ```
 
 - run
 
 ```shell
-$ cd aarch64_run/
+$ cd aarch64_run/aarhc64
 $ ./mnist_test
 ```
 
 or
 
 ```shell
-$ cd opencl_run/
+$ cd opencl_run/opencl
 $ ./mnist_test
 ```
 
