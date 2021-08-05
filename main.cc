@@ -19,26 +19,61 @@ double GetCurTime(void)
     return tm.tv_usec + tm.tv_sec * 1000000;
 }
 
-
-
 int main(int argc, char *argv[])
 {
-    if (argc > 1)
+    std::string image_path, lib_path, param_path;
+    int32_t loop_cnt;
+    switch(argc)
     {
-        LOG(INFO) << "[mnist tvm]:Image Path: " << argv[1];
-        LOG(INFO) << "[mnist tvm]:Dynamic Lib Path: " << argv[2];
-        LOG(INFO) << "[mnist tvm]:Parameter Path: " << argv[3];
+        case 1:
+            loop_cnt   = 5;
+            image_path = "./5.png";
+            lib_path   = "./mnist.so";
+            param_path = "./mnist.params";
+            break;
+
+        case 2:
+            loop_cnt   = atoi(argv[1]);
+            image_path = "./5.png";
+            lib_path   = "./mnist.so";
+            param_path = "./mnist.params";
+            break;
+
+        case 3:
+            loop_cnt   = atoi(argv[1]);
+            image_path = argv[2];
+            lib_path   = "./mnist.so";
+            param_path = "./mnist.params";
+            break;
+
+        case 4:
+            loop_cnt   = atoi(argv[1]);
+            image_path = argv[2];
+            lib_path   = argv[3];
+            param_path = "./mnist.params";
+            break;
+
+        case 5:
+            loop_cnt   = atoi(argv[1]);
+            image_path = argv[2];
+            lib_path   = argv[3];
+            param_path = argv[4];
+            break;
+
+        default:
+            LOG(INFO) << "executer [loop_cnt] [data] [lib] [params]";
+            return -1;
+            break;
     }
-    else
-    {
-        LOG(INFO) << "exe [imag path] [module dynamic lib path] [module parameter path]";
-        return -1;
-    }
+
+    LOG(INFO) << "[mnist tvm]:Image Path: " << image_path;
+    LOG(INFO) << "[mnist tvm]:Dynamic Lib Path: " << lib_path;
+    LOG(INFO) << "[mnist tvm]:Parameter Path: " << param_path;
     LOG(INFO) << "[mnist tvm]:Soft Version: V" << MNIST_VERSION;
 
     // read the image
     cv::Mat image, gray_image;
-    image = cv::imread(argv[1]);
+    image = cv::imread(image_path);
     if(image.data == nullptr){
         LOG(INFO) << "[mnist tvm]:Image don't exist!";
         return 0;
@@ -49,7 +84,6 @@ int main(int argc, char *argv[])
 
         LOG(INFO) << "[mnist tvm]:---Load Image--";
         LOG(INFO) << "[mnist tvm]:Image size: " << gray_image.rows << " X " << gray_image.cols;
-        // LOG(INFO) << gray_image;
         // cv::imshow("mnist image", gray_image);
         // cv::waitKey(0);
     }
@@ -69,10 +103,10 @@ int main(int argc, char *argv[])
     int device_id   = 0;
 #ifdef CPU 
     int device_type = kDLCPU;
-    LOG(INFO) << "[mnist tvm]:---Device Type Configure:CPU---";
+    LOG(INFO) << "[mnist tvm]:--- Device Type Configure: CPU ---";
 #elif OpenCL 
     int device_type = kDLOpenCL;
-    LOG(INFO) << "[mnist tvm]:---Device Type Configure:OPENCL---";
+    LOG(INFO) << "[mnist tvm]:--- Device Type Configure: OPENCL ---";
 #endif
     TVMByteArray params_arr;
     DLDevice dev{static_cast<DLDeviceType>(device_type), device_id};
@@ -83,49 +117,53 @@ int main(int argc, char *argv[])
 
     // load the mnist dynamic lib
     LOG(INFO) << "[mnist tvm]:---Load Dynamic Lib--";
-    tvm::runtime::Module mod_dylib = tvm::runtime::Module::LoadFromFile(argv[2]);
+    tvm::runtime::Module mod_dylib = tvm::runtime::Module::LoadFromFile(lib_path);
+    // get the mnist module
+    tvm::runtime::Module mod = mod_dylib.GetFunction("mnist")(dev);
+
     // load the mnist module parameters
     LOG(INFO) << "[mnist tvm]:---Load Parameters--";
-    std::ifstream params_in(argv[3], std::ios::binary);
+    std::ifstream params_in(param_path, std::ios::binary);
     std::string params_data((std::istreambuf_iterator<char>(params_in)), std::istreambuf_iterator<char>());
     params_in.close();
     params_arr.data = params_data.c_str();
     params_arr.size = params_data.length();
-
-    // get the mnist module
-    tvm::runtime::Module mod = mod_dylib.GetFunction("mnist")(dev);
-    // get set input data function
-    tvm::runtime::PackedFunc set_input = mod.GetFunction("set_input");
     // get load parameters function
     tvm::runtime::PackedFunc load_params = mod.GetFunction("load_params");
+    load_params(params_arr);
+
+    // get set input data function
+    tvm::runtime::PackedFunc set_input = mod.GetFunction("set_input");
     // get run function
     tvm::runtime::PackedFunc run = mod.GetFunction("run");
     // get output data function
     tvm::runtime::PackedFunc get_output = mod.GetFunction("get_output");
     
-    TVMArrayCopyFromBytes(x, gray_image.data, gray_image.rows * gray_image.cols * sizeof(float));
+    for (int t = 0; t < loop_cnt; t++)
+    {
+        double t1 = GetCurTime();
+        TVMArrayCopyFromBytes(x, gray_image.data, gray_image.rows * gray_image.cols * sizeof(float));
+        set_input("Input3", x);
+        double t2 = GetCurTime();
+        run();
+        TVMSynchronize(device_type, device_id, nullptr);
+        double t3 = GetCurTime();
+        get_output(0, y);
+        TVMArrayCopyToBytes(y, y_output.data(), 10 * sizeof(float));
+        double t4 = GetCurTime();
 
-    set_input("Input3", x);
-    load_params(params_arr);
+        LOG(INFO) << "[mnist tvm]:---Executor[" << t << "] Time(set_input):" << t2 - t1 << "[us]";
+        LOG(INFO) << "[mnist tvm]:---Executor[" << t << "] Time(run):" << t3 - t2 << "[us]";
+        LOG(INFO) << "[mnist tvm]:---Executor[" << t << "] Time(get_output):" << t4 - t3 << "[us]";
+    }
 
-    double t1 = GetCurTime();
-    run();
-    double t2 = GetCurTime();
-    get_output(0, y);
-    TVMArrayCopyToBytes(y, y_output.data(), 10 * sizeof(float));
-    double t3 = GetCurTime();
-    TVMArrayFree(x);
-    TVMArrayFree(y);
-    double t4 = GetCurTime();
-
-    //auto result = static_cast<float *>(y->data);
     for (int i = 0; i < 10; i++)
     {
-        LOG(INFO) << y_output[i];
+        LOG(INFO) << "[" << i << "]: " << y_output[i];
     }
-    LOG(INFO) << "[mnist tvm]:---Executor Time(run):" << t2 - t1 << "[us]";
-    LOG(INFO) << "[mnist tvm]:---Executor Time(get_output):" << t3 - t2 << "[us]";
-    LOG(INFO) << "[mnist tvm]:---Executor Time(Free):" << t4 - t3 << "[us]";
+
+    TVMArrayFree(x);
+    TVMArrayFree(y);
 
     return 0;
 }

@@ -3,6 +3,7 @@
 # vim:fenc=utf-8
 #
 
+import sys
 import numpy as np
 import onnx
 import os
@@ -12,29 +13,22 @@ import tvm
 from tvm import te
 import tvm.relay as relay
 
+target_type = sys.argv[1]
 
-mnist_model = onnx.load('../mnist/mnist-8.onnx')
+mnist_model = onnx.load('mnist/mnist-8.onnx')
 
 input_name = "Input3"
 shape_dict = {input_name: (1, 1, 28, 28)}
 print(shape_dict)
 
 mod, params = relay.frontend.from_onnx(mnist_model, shape_dict)
-
-#target_type = 'X86_64'
-#target_type = 'ARMv8'
-target_type = 'OpenCL'
-
-if target_type == 'X86_64':
+if target_type == 'x86_64':
     target = tvm.target.Target('llvm')
     target_host = tvm.target.Target('llvm')
-elif target_type == 'ARMv7':
-    target      = tvm.target.arm_cpu("rasp3b")
-    target_host = tvm.target.Target("llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon")
-elif target_type == 'ARMv8':
+elif target_type == 'aarch64':
     target      = tvm.target.Target("llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon")
     target_host = tvm.target.Target("llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon")
-elif target_type == 'OpenCL':
+elif target_type == 'opencl':
     target      = tvm.target.Target("opencl -device=mali")
     #target      = tvm.target.Target("opencl -device=intel_graphics")
     target_host = tvm.target.Target("llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon")
@@ -47,21 +41,17 @@ with tvm.transform.PassContext(opt_level=3):
 print(module_lib)
 
 # lib export
-if target_type == 'X86_64':
-    lib_path = "../module/x86_64/mnist.so"
-    param_path = "../module/x86_64/mnist.params"
+if target_type == 'x86_64':
+    lib_path   = "models/x86_64/mnist.so"
+    param_path = "models/x86_64/mnist.params"
     module_lib.export_library(lib_path)
-elif target_type == 'ARMv7':
-    lib_path = "../module/armv7/mnist.so"
-    param_path = "../module/armv7/mnist.params"
-    module_lib.export_library(lib_path, tvm.contrib.cc.cross_compiler('arm-linux-gnueabihf-g++'))
-elif target_type == 'ARMv8':
-    lib_path = "../module/armv8/mnist.so"
-    param_path = "../module/armv8/mnist.params"
+elif target_type == 'aarch64':
+    lib_path   = "models/aarch64/mnist.so"
+    param_path = "models/aarch64/mnist.params"
     module_lib.export_library(lib_path, tvm.contrib.cc.cross_compiler('aarch64-linux-gnu-g++'))
-elif target_type == 'OpenCL':
-    lib_path = "../module/opencl/mnist.so"
-    param_path = "../module/opencl/mnist.params"
+elif target_type == 'opencl':
+    lib_path   = "models/opencl/mnist.so"
+    param_path = "models/opencl/mnist.params"
     module_lib.export_library(lib_path, tvm.contrib.cc.cross_compiler('aarch64-linux-gnu-g++'))
 
 

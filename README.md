@@ -1,204 +1,206 @@
 # mnist_tvm
-This project using **TVM** to deploy the mnist module on `x86_64` , `aarch64`or `opencl` device.
+This project using **TVM** to build the mnist model and deploy the model on `x86_64` , `aarch64`or `opencl` device.
 
-## 1. Build
+## 1. Host Build
 
-### 1.1. Front build(python)
-The Purpose of build to generate the `xxx.so`and `xxx.params`file for target device. 
+1. running `build.sh` script for model build.
 
-1. Enter into `python` folder
+```shell
+$ ./build.sh
+```
+
+2. select the target device type
 
 ```bash
-$ cd python
+$ ./build.sh
+---| number | target type|
+-->   [1]   |   x86_64   |
+-->   [2]   |   aarch64  |
+-->   [3]   |   opencl   |
+-->   [4]   |   all      |
+Enter target type number: 1
 ```
-2. According to the device type, configure different parameters
-- **x86_64**
+If the enter number is `1` ,the script will compile and generate the executer which run on `x86_64` device.
 
-```python
-target_type = 'X86_64'
+3. the content of executers 
+
+In the `models` folder will  generate executers for different platforms , the content as follow:
+
 ```
-
-- **aarch64**
-
-```python
-target_type = 'ARMv8'
+models/
+├── aarch64
+│   ├── 5.png
+│   ├── mnist.params
+│   ├── mnist.so
+│   └── mnist_test
+├── aarch64_run.tar.gz
+├── data
+│   ├── 1.png
+│   ├── 2.png
+│   ├── 3.png
+│   ├── 4.png
+│   ├── 5.png
+│   ├── 6.png
+│   ├── 7.png
+│   ├── 8.png
+│   └── 9.png
+├── opencl
+│   ├── 5.png
+│   ├── mnist.params
+│   ├── mnist.so
+│   └── mnist_test
+├── opencl_run.tar.gz
+└── x86_64
+    ├── 5.png
+    ├── mnist.params
+    ├── mnist.so
+    └── mnist_test
 ```
+The `data` folder contain the test data.
+>> note: make sure the configure of python environment which contain tvm and AI fronted frame is ok.
 
-- **OpenCL**
+## 2. Device Run
 
-```python
-target_type = 'OpenCl'
-```
-
-3. Run python script
-
-```bash
-$ python model_build.py
-```
-
-the model dynamic lib will be in `module` folder.
-
-
-#### 1.1.1. Model Import
-For the compilation for different models can  reference to [Compile Deep Learning Models](https://tvm.apache.org/docs/tutorials/index.html#compile-deep-learning-models).
-
-#### 1.1.2. Target Device 
-The key parameters for different target device as follow:
-
-- **x86_64**
-
-```python
-target = tvm.target.Target('llvm')
-target_host = tvm.target.Target('llvm')
-```
-
-
-- **aarch64**
-
-```python
-target = tvm.target.Target("llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon")
-target_host = tvm.target.Target('llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon')
-```
-
-- **opencl**
-
-```python
-target = tvm.target.Target("opencl -device=mali")
-target_host = tvm.target.Target('llvm -device=arm_cpu -mtriple=aarch64-linux-gnu -mattr=+neon')
-```
-
-#### 1.1.3. Export Library
-
-When export the dynamic library need to pay attention to the following:
-
-- `x64`
-
-```python
-module_lib.export_library(lib_path)
-```
-
-
-- `aarch64`
-
-```python
-module_lib.export_library(lib_path, tvm.contrib.cc.cross_compiler("aarch64-linux-gnu-g++"))
-```
-
-
-- `opencl`
-
-```python
-module_lib.export_library(lib_path, tvm.contrib.cc.cross_compiler("aarch64-linux-gnu-g++"))
-```
-
-
-
-
-### 1.2. Backed build(C++)
-#### 1.2.1. `x86_64` Platform
-
-1. in `mnist_tvm` folder create `build_x64` and enter into it
-
-```shell
-$ mkdir build_x86_64
-$ cd build_x86_64
-```
-
-2. configure build environment
-
-default cmake link the `x86_64` runtime dynamic library.
-
-```shell
-$ cmake ..
-```
-
-3. build the source file
-
-this step will generate `mnist_test` executable file.
-
-```shell
-$ make -j$(nproc)
-```
-
-
-#### 1.2.2. `aarch64 ` Platform
-
-1. install cross-compile for `aarch64`
-
-```shell
-$ sudo apt-get update
-$ sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-```
-
-2. in `mnist_tvm` folder create `build_aarch64` and enter into it.
-
-```shell
-$ mkdir build_aarch64
-$ cd build_aarch64
-```
-
-3. configure build environment
-
-```shell
-$ cmake -DCMAKE_SYSTEM_NAME=Linux \
-		-DCMAKE_SYSTEM_VERSION=1 \
-		-DMACHINE_NAME=aarch64 \
-		-DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc \
-		-DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ \
-		-DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-		-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-		-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-		-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
-		..
-```
-3. build the project
-```shell
-$ make -j$(nproc)
-```
-#### 1.2.3. `OpenCL` Platform
-
-1. in `mnist_tvm` folder create `build_opencl` and enter into it.
-
-```shell
-$ mkdir build_opencl
-$ cd build_opencl
-```
-
-2. configure build environment
-
-```shell
-$ cmake -DCMAKE_SYSTEM_NAME=Linux \
-		-DCMAKE_SYSTEM_VERSION=1 \
-		-DTARGET_DEVICE_TYPE=OpenCL \
-		-DMACHINE_NAME=aarch64 \
-		-DCMAKE_C_COMPILER=/usr/bin/aarch64-linux-gnu-gcc \
-		-DCMAKE_CXX_COMPILER=/usr/bin/aarch64-linux-gnu-g++ \
-		-DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
-		-DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-		-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-		-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
-		..
-```
-
-3. build the project
-```shell
-$ make -j$(nproc)
-```
-## 2. Running
-
-### 2.1. depence
-- opencv
+### 2.1. Dependent library
+- **OpenCV**
 1. libopencv_core.so
 2. libopencv_imgcodecs.so
 3. libopencv_imgproc.so
 
-- tvm
+in the `depend` folder include the `opencv_deploy.run` file, if target device don't contain this dynamic library, you should copy this file to target device and execute command as follow:
+
+```bash
+$ chmod 777 opencv_deploy.run
+$ ./opencv_deploy.run
+```
+
+this will auto deploy the dynamic library to the `/usr/sdrv/opencv` folder.
+
+- **TVM**
 1. libtvm-runtime.so
 
-### 2.2. run
-when running the executable file,three parameter need to be input.
+In the `tvm` folder include the `tvm_runtime_deploy.run` file,  if target device don't contain this dynamic library, you should copy this file to target device and execute command as follow:
 
 ```shell
-executer [image path] [module dynamic lib path] [module parameter path]
+$ chmod 777 tvm_runtime_deploy.run
+$ ./tvm_runtime_deploy.run
+```
+
+This will auto deploy the `libtvm-runtime.so` to `/usr/sdrv/tvm` folder.
+
+### 2.2. Copy Runnable Package
+
+- copy
+
+In the `models` folder, copy `aarch64_run.tar.gz` or `opencl_run.tar.gz`  file to the target device.
+
+- unzip
+
+```shell
+$ tar -zxvf aarch64_run.tar.gz aarch64_run
+$ tar -zxvf opencl_run.tar.gz opencl_run
+```
+
+- run
+
+```shell
+$ cd aarch64_run/
+$ ./mnist_test
+```
+
+or
+
+```shell
+$ cd opencl_run/
+$ ./mnist_test
+```
+
+
+### 2.3. Running
+
+The executable file with four optional parameters, we can running with the numbers of parameters from 0 to 4, the optional parameters as follow:
+
+```shell
+$ executer [loop_cnt] [data] [lib] [params] 
+```
+
+For example:
+
+1. zero parameters mode
+
+```shell
+$ ./minst_test
+```
+
+This mode will auto load the `data`, `lib` and `params` under the current folder, the default loop count is **5**.
+
+2. one parameters mode
+
+```shell
+$ ./mnist_test 100
+```
+
+This mode can set the loop count as need.
+
+3. two parameters mode
+
+```shell
+$ ./mnist_test 100 ../data/4.png 
+```
+This mode can set the loop count and input data as need.
+
+4. tree parameters mode
+
+```
+$ ./mnist_test 100 ../data/6.png ./mnist.so
+```
+This mode can set the loop count ,input data  and model dynamic library as need.
+
+
+5. four parameters mode
+
+```shell
+$ ./mnist_test 100 ../data/8.png ./mnist.so ./mnist.params 
+```
+
+If select four parameters mode, you can specify the input data and the loop count. The dynamic library and parameter of model can also configure.
+
+### 2.4 Result
+
+```shell
+[21:57:32] main.cc:42: [mnist tvm]:Image Path: ./5.png                                       
+[21:57:32] main.cc:43: [mnist tvm]:Dynamic Lib Path: ./mnist.so
+[21:57:32] main.cc:44: [mnist tvm]:Parameter Path: ./mnist.params
+[21:57:32] main.cc:45: [mnist tvm]:Soft Version: V1.1.2
+[21:57:32] main.cc:58: [mnist tvm]:---Load Image--
+[21:57:32] main.cc:59: [mnist tvm]:Image size: 28 X 28
+[21:57:32] main.cc:79: [mnist tvm]:--- Device Type Configure: CPU ---
+[21:57:32] main.cc:92: [mnist tvm]:---Load Dynamic Lib--
+[21:57:32] main.cc:98: [mnist tvm]:---Load Parameters--
+[21:57:32] main.cc:130: [mnist tvm]:---Executor[0] Time(set_input):2[us]
+[21:57:32] main.cc:131: [mnist tvm]:---Executor[0] Time(run):154[us]
+[21:57:32] main.cc:132: [mnist tvm]:---Executor[0] Time(get_output):2[us]
+[21:57:32] main.cc:130: [mnist tvm]:---Executor[1] Time(set_input):1[us]
+[21:57:32] main.cc:131: [mnist tvm]:---Executor[1] Time(run):132[us]
+[21:57:32] main.cc:132: [mnist tvm]:---Executor[1] Time(get_output):1[us]
+[21:57:32] main.cc:130: [mnist tvm]:---Executor[2] Time(set_input):2[us]
+[21:57:32] main.cc:131: [mnist tvm]:---Executor[2] Time(run):92[us]
+[21:57:32] main.cc:132: [mnist tvm]:---Executor[2] Time(get_output):0[us]
+[21:57:32] main.cc:130: [mnist tvm]:---Executor[3] Time(set_input):1[us]
+[21:57:32] main.cc:131: [mnist tvm]:---Executor[3] Time(run):92[us]
+[21:57:32] main.cc:132: [mnist tvm]:---Executor[3] Time(get_output):0[us]
+[21:57:32] main.cc:130: [mnist tvm]:---Executor[4] Time(set_input):1[us]
+[21:57:32] main.cc:131: [mnist tvm]:---Executor[4] Time(run):98[us]
+[21:57:32] main.cc:132: [mnist tvm]:---Executor[4] Time(get_output):0[us]
+[21:57:32] main.cc:137: [0]: -2702.9
+[21:57:32] main.cc:137: [1]: -2044.03
+[21:57:32] main.cc:137: [2]: -1144.48
+[21:57:32] main.cc:137: [3]: 3431.76
+[21:57:32] main.cc:137: [4]: -2802.41
+[21:57:32] main.cc:137: [5]: 4449.7
+[21:57:32] main.cc:137: [6]: -2858.96
+[21:57:32] main.cc:137: [7]: 127.987
+[21:57:32] main.cc:137: [8]: 912.245
+[21:57:32] main.cc:137: [9]: 528.989
 ```
 
