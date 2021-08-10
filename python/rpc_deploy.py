@@ -26,11 +26,10 @@ input_name = "Input3"
 input_shape = (1, 1, 28, 28);
 dtype = "float32"
 shape_dict = {input_name: input_shape}
-#print("shape_dict:", shape_dict)
 
 # The following is my environment, change this to the IP address of
 # your target device
-host = "192.168.0.103"
+host = "192.168.104.240"
 port = 9090
 # convert the model to ir
 model, params = relay.frontend.from_onnx(mnist_model, shape_dict)

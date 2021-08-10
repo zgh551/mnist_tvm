@@ -17,7 +17,7 @@ This will auto deploy the `libtvm-runtime.so` to `/usr/sdrv/tvm` folder.
 
 ### 1.2. Python library
 
-In device side,check whether install `psutil` and `cloudpickle` package.
+In device side,check whether installed `psutil` and `cloudpickle` package.
 
 ```shell
 $ python3 -m pip list | grep psutil
@@ -30,7 +30,17 @@ If these package exist, then ignore next step, otherwise install these package.
 $ python3 -m pip install psutil cloudpickle
 ```
 
-### 1.3 RPC Server
+### 1.3.  Device IP 
+
+Query target device ip address.
+
+```shell
+$ ifconfig
+```
+
+Make sure the device and host to be in the same network segment.
+
+### 1.4 RPC Server
 
 Establish the **RPC** server on target device.
 
@@ -44,15 +54,19 @@ if rpc server is successfully established, it will show message as follow:
 INFO:RPCServer:bind to 0.0.0.0:9090
 ```
 
-## 2. Host Build
+## 2. Host
 
-1. running `build.sh` script for model build.
+1. Revise the target device ip address.
+
+Open the `/python/rpc_deploy.py` file and replace  `host="192.168.104.240"`to your device actual ip address.
+
+2. running `build.sh` script for model build.
 
 ```shell
 $ ./build.sh
 ```
 
-2. select the target device type
+3. select the target device type
 
 ```bash
 $ ./build.sh
@@ -68,39 +82,37 @@ If the enter number is `1` ,the script will deploy model on `x86_64` device.
 ### 2.3 Result
 
 ```shell
-[21:57:32] main.cc:42: [mnist tvm]:Image Path: ./5.png                                       
-[21:57:32] main.cc:43: [mnist tvm]:Dynamic Lib Path: ./mnist.so
-[21:57:32] main.cc:44: [mnist tvm]:Parameter Path: ./mnist.params
-[21:57:32] main.cc:45: [mnist tvm]:Soft Version: V1.1.2
-[21:57:32] main.cc:58: [mnist tvm]:---Load Image--
-[21:57:32] main.cc:59: [mnist tvm]:Image size: 28 X 28
-[21:57:32] main.cc:79: [mnist tvm]:--- Device Type Configure: CPU ---
-[21:57:32] main.cc:92: [mnist tvm]:---Load Dynamic Lib--
-[21:57:32] main.cc:98: [mnist tvm]:---Load Parameters--
-[21:57:32] main.cc:130: [mnist tvm]:---Executor[0] Time(set_input):2[us]
-[21:57:32] main.cc:131: [mnist tvm]:---Executor[0] Time(run):154[us]
-[21:57:32] main.cc:132: [mnist tvm]:---Executor[0] Time(get_output):2[us]
-[21:57:32] main.cc:130: [mnist tvm]:---Executor[1] Time(set_input):1[us]
-[21:57:32] main.cc:131: [mnist tvm]:---Executor[1] Time(run):132[us]
-[21:57:32] main.cc:132: [mnist tvm]:---Executor[1] Time(get_output):1[us]
-[21:57:32] main.cc:130: [mnist tvm]:---Executor[2] Time(set_input):2[us]
-[21:57:32] main.cc:131: [mnist tvm]:---Executor[2] Time(run):92[us]
-[21:57:32] main.cc:132: [mnist tvm]:---Executor[2] Time(get_output):0[us]
-[21:57:32] main.cc:130: [mnist tvm]:---Executor[3] Time(set_input):1[us]
-[21:57:32] main.cc:131: [mnist tvm]:---Executor[3] Time(run):92[us]
-[21:57:32] main.cc:132: [mnist tvm]:---Executor[3] Time(get_output):0[us]
-[21:57:32] main.cc:130: [mnist tvm]:---Executor[4] Time(set_input):1[us]
-[21:57:32] main.cc:131: [mnist tvm]:---Executor[4] Time(run):98[us]
-[21:57:32] main.cc:132: [mnist tvm]:---Executor[4] Time(get_output):0[us]
-[21:57:32] main.cc:137: [0]: -2702.9
-[21:57:32] main.cc:137: [1]: -2044.03
-[21:57:32] main.cc:137: [2]: -1144.48
-[21:57:32] main.cc:137: [3]: 3431.76
-[21:57:32] main.cc:137: [4]: -2802.41
-[21:57:32] main.cc:137: [5]: 4449.7
-[21:57:32] main.cc:137: [6]: -2858.96
-[21:57:32] main.cc:137: [7]: 127.987
-[21:57:32] main.cc:137: [8]: 912.245
-[21:57:32] main.cc:137: [9]: 528.989
+---| number | target type|                                                                                                       
+-->   [1]   |   x86_64   | 
+-->   [2]   |   aarch64  |     
+-->   [3]   |   opencl   |         
+-->   [4]   |   all      |
+Enter target type number: 4                                                                                                      
+all build      
+device: llvm -keys=cpu -link-params=0
+host: llvm -keys=cpu -link-params=0
+One or more operators have not been tuned. Please tune your model for better performance. Use DEBUG logging level to see more details.
+<tvm.relay.backend.executor_factory.GraphExecutorFactoryModule object at 0x7fa904bf9390>
+Target type: x86_64
+TVM prediction number:  8
+Evaluate inference time cost...
+Mean inference time (std dev): 0.08 ms (0.02 ms)
+device: llvm -keys=arm_cpu,cpu -device=arm_cpu -link-params=0 -mattr=+neon -mtriple=aarch64-linux-gnu
+host: llvm -keys=arm_cpu,cpu -device=arm_cpu -link-params=0 -mattr=+neon -mtriple=aarch64-linux-gnu
+One or more operators have not been tuned. Please tune your model for better performance. Use DEBUG logging level to see more details.
+<tvm.relay.backend.executor_factory.GraphExecutorFactoryModule object at 0x7f2ea118b358>
+Target type: aarch64
+TVM prediction number:  8
+Evaluate inference time cost...
+Mean inference time (std dev): 0.23 ms (0.08 ms)
+device: opencl -keys=mali,opencl,gpu -device=mali -max_num_threads=256 -thread_warp_size=1
+host: llvm -keys=arm_cpu,cpu -device=arm_cpu -link-params=0 -mattr=+neon -mtriple=aarch64-linux-gnu
+One or more operators have not been tuned. Please tune your model for better performance. Use DEBUG logging level to see more details.
+[16:07:09] /home/zgh/Workspace/github/tvm/src/runtime/opencl/opencl_device_api.cc:400: Warning: Using CPU OpenCL device
+<tvm.relay.backend.executor_factory.GraphExecutorFactoryModule object at 0x7ff2e71d8358>
+Target type: opencl
+TVM prediction number:  5
+Evaluate inference time cost...
+Mean inference time (std dev): 6.09 ms (0.79 ms)
 ```
 
