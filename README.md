@@ -1,7 +1,50 @@
-# mnist_tvm
-This project using **TVM** to build the mnist model and deploy the model on `x86_64` , `aarch64`or `opencl` device.
+# Example one
+This example introduce one way to use `tvm rpc server` to deploy the **mnist** model  on `x86_64` , `aarch64`or `opencl` device.
 
-## 1. Host Build
+## 1. Device
+### 1.1. Dependent library
+- **TVM Runtime**
+1. libtvm-runtime.so
+
+In the `tvm` folder, run `./build.sh deploy` will generate the `tvm_runtime_deploy.run` file in `build_aarch64` folder,  if target device don't contain this dynamic library, you should copy this file to target device and execute command as follow:
+
+```shell
+$ chmod 777 tvm_runtime_deploy.run
+$ ./tvm_runtime_deploy.run
+```
+
+This will auto deploy the `libtvm-runtime.so` to `/usr/sdrv/tvm` folder.
+
+### 1.2. Python library
+
+In device side,check whether install `psutil` and `cloudpickle` package.
+
+```shell
+$ python3 -m pip list | grep psutil
+$ python3 -m pip list | grep cloudpickle
+```
+
+If these package exist, then ignore next step, otherwise install these package.
+
+```shell
+$ python3 -m pip install psutil cloudpickle
+```
+
+### 1.3 RPC Server
+
+Establish the **RPC** server on target device.
+
+```shell
+$ python3 -m tvm.exec.rpc_server --host 0.0.0.0 --port 9090
+```
+
+if rpc server is successfully established, it will show message as follow:
+
+```
+INFO:RPCServer:bind to 0.0.0.0:9090
+```
+
+## 2. Host Build
 
 1. running `build.sh` script for model build.
 
@@ -20,144 +63,9 @@ $ ./build.sh
 -->   [4]   |   all      |
 Enter target type number: 1
 ```
-If the enter number is `1` ,the script will compile and generate the executer which run on `x86_64` device.
+If the enter number is `1` ,the script will deploy model on `x86_64` device.
 
-3. the content of executers 
-
-In the `models` folder will  generate executers for different platforms , the content as follow:
-
-```
-models/
-├── aarch64_run.tar.gz
-├── data
-│   ├── 1.png
-│   ├── 2.png
-│   ├── 3.png
-│   ├── 4.png
-│   ├── 5.png
-│   ├── 6.png
-│   ├── 7.png
-│   ├── 8.png
-│   └── 9.png
-├── opencl_run.tar.gz
-└── x86_64
-    ├── 5.png
-    ├── mnist.params
-    ├── mnist.so
-    └── mnist_test
-
-```
-The `data` folder contain some test data. The `aarch64_run.tar.gz` and `opencl_run.tar.gz` file can copy to the target device to running. In the PC host, you can enter into `x86_64` folder to run `./mnist_test`.
-
->> note: make sure the configure of python environment which contain tvm and AI fronted frame is ok.
-
-## 2. Device Run
-
-### 2.1. Dependent library
-- **OpenCV**
-1. libopencv_core.so
-2. libopencv_imgcodecs.so
-3. libopencv_imgproc.so
-
-in the `depend` folder include the `opencv_deploy.run` file, if target device don't contain this dynamic library, you should copy this file to target device and execute command as follow:
-
-```bash
-$ chmod 777 opencv_deploy.run
-$ ./opencv_deploy.run
-```
-
-this will auto deploy the dynamic library to the `/usr/sdrv/opencv` folder.
-
-- **TVM**
-1. libtvm-runtime.so
-
-In the `tvm` folder include the `tvm_runtime_deploy.run` file,  if target device don't contain this dynamic library, you should copy this file to target device and execute command as follow:
-
-```shell
-$ chmod 777 tvm_runtime_deploy.run
-$ ./tvm_runtime_deploy.run
-```
-
-This will auto deploy the `libtvm-runtime.so` to `/usr/sdrv/tvm` folder.
-
-### 2.2. Copy Runnable Package
-
-- copy
-
-In the `models` folder, copy `aarch64_run.tar.gz` or `opencl_run.tar.gz`  file to the target device.
-
-- unzip
-
-```shell
-$ tar -zxvf aarch64_run.tar.gz
-$ tar -zxvf opencl_run.tar.gz
-```
-
-- run
-
-```shell
-$ cd aarch64_run/aarhc64
-$ ./mnist_test
-```
-
-or
-
-```shell
-$ cd opencl_run/opencl
-$ ./mnist_test
-```
-
-
-### 2.3. Running
-
-The executable file with four optional parameters, we can running with the numbers of parameters from 0 to 4, the optional parameters as follow:
-
-```shell
-$ executer [loop_cnt] [data] [lib] [params] 
-```
-
-For example:
-
-1. zero parameters mode
-
-```shell
-$ ./minst_test
-```
-
-This mode will auto load the `data`, `lib` and `params` under the current folder, the default loop count is **5**.
-
-2. one parameters mode
-
-```shell
-$ ./mnist_test 100
-```
-
-This mode can set the loop count as need.
-
-3. two parameters mode
-
-```shell
-$ ./mnist_test 100 ../data/4.png 
-```
-This mode can set the loop count and input data as need.
-
-4. tree parameters mode
-
-```
-$ ./mnist_test 100 ../data/6.png ./mnist.so
-```
-This mode can set the loop count ,input data  and model dynamic library as need.
-
-
-5. four parameters mode
-
-```shell
-$ ./mnist_test 100 ../data/8.png ./mnist.so ./mnist.params 
-```
-
-If select four parameters mode, you can specify the input data and the loop count. The dynamic library and parameter of model can also configure.
-
-### 2.4 Result
+### 2.3 Result
 
 ```shell
 [21:57:32] main.cc:42: [mnist tvm]:Image Path: ./5.png                                       
